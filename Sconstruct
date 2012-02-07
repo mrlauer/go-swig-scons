@@ -6,11 +6,14 @@ import re
 gobld = Builder(action = '6g -o $TARGET $SOURCE', suffix = '.6', src_suffix = '.go')
 
 def _find_swig_module(swig_filename):
-    with open(unicode(swig_filename)) as f:
-        for l in f:
-            m = re.match(r'\s*%module\s+(\w+)', l)
-            if m:
-                return m.group(1)
+    try:
+        with open(unicode(swig_filename)) as f:
+            for l in f:
+                m = re.match(r'\s*%module\s+(\w+)', l)
+                if m:
+                    return m.group(1)
+    except:
+        pass
     return None
 
 # a builder for goswig
@@ -21,8 +24,13 @@ def _goswig_emitter(target, source, env):
         target.append(module + '_gc' + env['CFILESUFFIX'])
     return target, source
 
+def _swig_generator(source, target, env, for_signature):
+    t = str(target[0])
+    dirname = os.path.dirname(t)
+    return 'swig -go -c++ -o %s -outdir %s $SOURCE' % (t, dirname)
+
 goswigbld = Builder(
-        action = 'swig -go -c++ $SOURCE',
+        generator = _swig_generator,
         src_suffix = '.i',
         suffix = '$SWIGCXXFILESUFFIX',
         emitter = _goswig_emitter,
@@ -33,7 +41,7 @@ gopackbld = Builder(action = 'gopack grc $TARGET $SOURCES')
 
 # returns a cfile to be linked with the original library and a cgo module
 def GoSwigComplete(env, basename, module):
-    swigNodes = env.GoSwig(basename)
+    swigNodes = env.GoSwig(basename, MODULE=module)
     obj1 = env.GoObject(swigNodes[1])
     obj2 = env.Object(swigNodes[2], CC = '6c', CPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64'))
     lib = env.GoPack(module + '.a', [obj1, obj2])
@@ -44,11 +52,10 @@ env = Environment()
 env.PrependENVPath('PATH', os.path.join(os.environ['GOROOT'], 'bin'))
 env.PrependENVPath('PATH', '/usr/local/bin')
 env.SetDefault(CXXFILESUFFIX = ".cxx")
-env.Replace(SWIGCXXFILESUFFIX = "_wrap.cxx")
 env.Append(BUILDERS = { 'GoObject' : gobld })
 env.Append(BUILDERS = { 'GoSwig' : goswigbld })
 env.Append(BUILDERS = { 'GoPack' : gopackbld })
 AddMethod(env, GoSwigComplete)
 
 Export('env')
-SConscript('src/SConscript')
+SConscript('src/SConscript', variant_dir='build', duplicate=0)
