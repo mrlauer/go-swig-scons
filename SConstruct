@@ -1,13 +1,20 @@
 import os
 import re
 
+GOCPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64')
+
 # a builder for go
 # TODO: check env for proper architecture
-gobld = Builder(action = '6g -o $TARGET $SOURCE', suffix = '.6', src_suffix = '.go')
+gobld = Builder(action = {},
+                suffix = '.6',
+                single_source = 1)
+gobld.add_action('.go', '6g -o $TARGET $SOURCE')
+gobld.add_action('.c', '6c $GOCFLAGS -o $TARGET $SOURCE')
 
-def _find_swig_module(swig_filename):
+def _find_swig_module(swig_file):
     try:
-        with open(unicode(swig_filename)) as f:
+        swig_src = swig_file.srcnode()
+        with open(unicode(swig_src)) as f:
             for l in f:
                 m = re.match(r'\s*%module\s+(\w+)', l)
                 if m:
@@ -37,24 +44,26 @@ goswigbld = Builder(
         )
 
 # a builder for gopack
-gopackbld = Builder(action = 'gopack grc $TARGET $SOURCES')
+gopackbld = Builder(action = 'gopack grc $TARGET $SOURCES',
+        suffix = '.a',
+        src_suffix = '.6',
+        src_builder = ['GoObject'])
 
 # returns a cfile to be linked with the original library and a cgo module
 def GoSwigComplete(env, basename, module):
     swigNodes = env.GoSwig(basename, MODULE=module)
-    obj1 = env.GoObject(swigNodes[1])
-    obj2 = env.Object(swigNodes[2], CC = '6c', CPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64'))
-    lib = env.GoPack(module + '.a', [obj1, obj2])
-    return [swigNodes, lib]
+    lib = env.GoPack(module + '.a', swigNodes[1:])
+    return [swigNodes[0], lib]
     
 
 env = Environment()
 env.PrependENVPath('PATH', os.path.join(os.environ['GOROOT'], 'bin'))
 env.PrependENVPath('PATH', '/usr/local/bin')
-env.SetDefault(CXXFILESUFFIX = ".cxx")
 env.Append(BUILDERS = { 'GoObject' : gobld })
 env.Append(BUILDERS = { 'GoSwig' : goswigbld })
 env.Append(BUILDERS = { 'GoPack' : gopackbld })
+env.SetDefault(GOPKGPATH = GOCPPPATH)
+env.SetDefault(GOCFLAGS = '-I$GOPKGPATH')
 AddMethod(env, GoSwigComplete)
 
 Export('env')
