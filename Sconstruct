@@ -34,10 +34,9 @@ gopackbld = Builder(action = 'gopack grc $TARGET $SOURCES')
 # returns a cfile to be linked with the original library and a cgo module
 def GoSwigComplete(env, basename, module):
     swigNodes = env.GoSwig(basename)
-    env.GoObject(module)
     obj1 = env.GoObject(swigNodes[1])
     obj2 = env.Object(swigNodes[2], CC = '6c', CPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64'))
-    lib = env.GoPack(module + '.a', obj1, obj2)
+    lib = env.GoPack(module + '.a', [obj1, obj2])
     return [swigNodes, lib]
     
 
@@ -52,4 +51,4 @@ env.Append(BUILDERS = { 'GoPack' : gopackbld })
 AddMethod(env, GoSwigComplete)
 
 Export('env')
-SConscript('SConscript')
+SConscript('src/SConscript')

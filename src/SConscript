@@ -1,0 +1,3 @@
+Import('env')
+
+env.GoSwigComplete('swig1', 'FirstTest')
