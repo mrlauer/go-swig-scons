@@ -31,22 +31,25 @@ goswigbld = Builder(
 # a builder for gopack
 gopackbld = Builder(action = 'gopack grc $TARGET $SOURCES')
 
-def make_swig_nodes(basename, module, env):
-    cfile = env.GoSwig(basename)
-    obj = env.Object(cfile[0])
+# returns a cfile to be linked with the original library and a cgo module
+def GoSwigComplete(env, basename, module):
+    swigNodes = env.GoSwig(basename)
     env.GoObject(module)
-    obj1 = env.GoObject(cfile[1])
-    obj2 = env.Object(cfile[2], CC = '6c', CPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64'))
-    env.GoPack(module + '.a', obj1, obj2)
-
+    obj1 = env.GoObject(swigNodes[1])
+    obj2 = env.Object(swigNodes[2], CC = '6c', CPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64'))
+    lib = env.GoPack(module + '.a', obj1, obj2)
+    return [swigNodes, lib]
+    
 
 env = Environment()
 env.PrependENVPath('PATH', os.path.join(os.environ['GOROOT'], 'bin'))
 env.PrependENVPath('PATH', '/usr/local/bin')
 env.SetDefault(CXXFILESUFFIX = ".cxx")
 env.Replace(SWIGCXXFILESUFFIX = "_wrap.cxx")
-env.Append(SWIGFLAGS = Split('-go -c++'))
 env.Append(BUILDERS = { 'GoObject' : gobld })
 env.Append(BUILDERS = { 'GoSwig' : goswigbld })
 env.Append(BUILDERS = { 'GoPack' : gopackbld })
-make_swig_nodes('swig1', 'FirstTest', env)
+AddMethod(env, GoSwigComplete)
+
+Export('env')
+SConscript('SConscript')
