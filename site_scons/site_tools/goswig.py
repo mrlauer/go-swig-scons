@@ -16,7 +16,7 @@ def _find_swig_module(swig_file):
 
 # a builder for goswig
 def _goswig_emitter(target, source, env):
-    module = env.get('MODULE') or _find_swig_module(source[0])
+    module = env.get('SWIGMODULE') or _find_swig_module(source[0])
     if module:
         target.append(module + '.go')
         target.append(module + '_gc' + env['CFILESUFFIX'])
@@ -29,7 +29,7 @@ def _swig_generator(source, target, env, for_signature):
 
 # returns a cfile to be linked with the original library and a cgo module
 def GoSwigComplete(env, basename, module):
-    swigNodes = env.GoSwig(basename, MODULE=module)
+    swigNodes = env.GoSwig(basename, SWIGMODULE=module)
     lib = env.GoPack(module + '.a', swigNodes[1:])
     return [swigNodes[0], lib]
     
