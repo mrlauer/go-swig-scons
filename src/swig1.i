@@ -1,18 +1,8 @@
 %module FirstTest
 
 %{
-    class Foo {
-        public:
-        virtual ~Foo();
-        virtual int Fn();
-/*        virtual int Bar();*/
-    };
+#include <foo.h>
 %}
 
-class Foo {
-    public:
-    virtual ~Foo();
-    virtual int Fn();
-/*    virtual int Bar();*/
-};
+%include <foo.h>
 
