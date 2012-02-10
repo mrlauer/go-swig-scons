@@ -1,4 +1,2 @@
 Import('env')
-
-swigout = env.GoSwigComplete('swig1', 'FirstTest')
-env.Object(swigout[0], CPPPATH=".")
+SConscript('clib/SConscript', duplicate=0) 
