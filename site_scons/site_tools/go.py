@@ -1,9 +1,9 @@
 import os
+import sys
 import subprocess
-from SCons.Script import *
+import platform
 
-GOCPPPATH = os.path.join(os.environ['GOROOT'], 'pkg', 'darwin_amd64')
-GOPKGPATH = GOCPPPATH
+from SCons.Script import *
 
 def _make_gocflags(env):
     return '-I' + env['GOPKGPATH']
@@ -34,18 +34,38 @@ def generate(env):
             src_suffix = '$GOOBJSUFFIX',
             src_builder = ['GoObject'])
 
+    # figure out the environment
+    # Should this be in a Configure block?
+    # we'll get GOROOT from the environment for now.
+    env.SetDefault(GOROOT = os.environ.get('GOROOT'))
+    # get GOOS and GOARCH from the platform. This may not be quite right!
+    system = platform.system()
+    env.SetDefault(GOOS = system.lower())
+    machine = platform.machine()
+    goarch = "amd64"
+    goarchchar = "6"
+    is64 = (sys.maxsize > 2**32)
+    if not is64:
+        if machine == "i386":
+            goarch = "386"
+            goarchchar = "8"
+        else:
+            goarch = "arm"
+            goarchchar = "5"
+    env.SetDefault(GOARCH = goarch, GOARCHCHAR = goarchchar) 
+    env.SetDefault(GOPKGPATH = '$GOROOT/pkg/${GOOS}_${GOARCH}')
+    env.SetDefault(COCPPPATH = '$GOPKGPATH')
+
     env.PrependENVPath('PATH', os.path.join(os.environ['GOROOT'], 'bin'))
     env.PrependENVPath('PATH', '/usr/local/bin')
-    env.SetDefault(GONUMBER = '6')
-    env.SetDefault(GOCOMPILER = '${GONUMBER}g')
-    env.SetDefault(GOCC = '${GONUMBER}c')
-    env.SetDefault(GOLINKER = '${GONUMBER}l')
-    env.SetDefault(GOOBJSUFFIX = '.${GONUMBER}')
+    env.SetDefault(GOCOMPILER = '${GOARCHCHAR}g')
+    env.SetDefault(GOCC = '${GOARCHCHAR}c')
+    env.SetDefault(GOLINKER = '${GOARCHCHAR}l')
+    env.SetDefault(GOOBJSUFFIX = '.${GOARCHCHAR}')
     env.Append(BUILDERS = { 'GoObject' : gobld })
     env.Append(BUILDERS = { 'GoPack' : gopackbld })
     env.Append(BUILDERS = { 'GoExe' : goexebuild })
     env.Append(BUILDERS = { 'GoLibrary' : golibbuild })
-    env.SetDefault(GOPKGPATH = GOCPPPATH)
     env.SetDefault(GOALLPKGPATH = '$GOINCPATH:$GOPKGPATH')
     env['_make_gocflags'] = _make_gocflags
     env.SetDefault(GOCFLAGS = '${ _make_gocflags(__env__) }')
