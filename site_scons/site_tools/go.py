@@ -46,36 +46,43 @@ def generate(env):
     env.Append(BUILDERS = { 'GoExe' : goexebuild })
     env.Append(BUILDERS = { 'GoLibrary' : golibbuild })
     env.SetDefault(GOPKGPATH = GOCPPPATH)
+    env.SetDefault(GOALLPKGPATH = '$GOINCPATH:$GOPKGPATH')
     env['_make_gocflags'] = _make_gocflags
     env.SetDefault(GOCFLAGS = '${ _make_gocflags(__env__) }')
     env.SetDefault(_GOINFLAGS = '$( ${_concat( "-I", GOINCPATH, "", __env__, RDirs, TARGET, SOURCE ) } $)')
     env.SetDefault(_GOLINKFLAGS = '$( ${_concat( "-L", GOINCPATH, "", __env__, RDirs, TARGET, SOURCE ) } $)')
-    #env.Append(SCANNERS = goscan)
+    env.Append(SCANNERS = goscan)
 
 def exists(env):
     return env.detect('GoObject')
 
 #scanner for go dependencies
 def _goimport_scan(node, env, path, arg = None):
-    if not node.exists():
-        # generated nodes don't necessarily exist yet, so can't be scanned
-        return []
+    if callable(path):
+        path = path()
+#    if not (node.exists() or node == node.srcnode()):
+#        # generated nodes don't necessarily exist yet, so can't be scanned
+#        print node, "does not exist"
+#        return []
     proc = subprocess.Popen('godeps', stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     output, _ = proc.communicate(node.get_text_contents())
+
+    topdir = env.Dir('#').abspath
 
     results = []
     for s in output.split():
         arname = s + '.a'
         for p in path:
-            pname = os.path.join(p, arname)
+            pname = os.path.join(topdir, str(p), arname)
             if os.path.exists(pname):
                 results.append(pname)
                 break
-        else:
-            results.append(arname)
+            if File(pname).has_builder():
+                results.append(pname)
+                break
     return results
 
 def _goimport_pathfn(env, *args):
-    return (env['GOPKGPATH'],)
-goscan = Scanner(function = _goimport_scan, skeys = ['.go'], path_function = _goimport_pathfn)
+    return (env.subst,)
+goscan = Scanner(function = _goimport_scan, skeys = ['.go'], path_function = FindPathDirs('GOALLPKGPATH'))
 
