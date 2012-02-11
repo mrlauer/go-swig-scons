@@ -25,7 +25,7 @@ def _goswig_emitter(target, source, env):
 def _swig_generator(source, target, env, for_signature):
     t = str(target[0])
     dirname = os.path.dirname(t)
-    return 'swig -go -c++ -o %s -outdir %s $SOURCE' % (t, dirname)
+    return 'swig -go -c++ -soname $SWIGSONAME -o %s -outdir %s $SOURCE' % (t, dirname)
 
 # returns a cfile to be linked with the original library and a cgo module
 def GoSwigComplete(env, basename, module):
@@ -42,7 +42,8 @@ def generate(env):
         )
 
     env.Append(BUILDERS = { 'GoSwig' : goswigbld })
-    AddMethod(env, GoSwigComplete)
+    env.AddMethod(GoSwigComplete)
+    env.SetDefault(SWIGSONAME = '${SHLIBPREFIX}${SWIGMODULE}${SHLIBSUFFIX}')
 
 def exists(env):
     return env.detect('GoSwig')

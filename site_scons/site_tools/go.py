@@ -14,7 +14,7 @@ def generate(env):
     gobld = Builder(action = {},
                     suffix = '$GOOBJSUFFIX',
                     single_source = 1)
-    gobld.add_action('.go', '$GOCOMPILER -o $TARGET $SOURCE')
+    gobld.add_action('.go', '$GOCOMPILER $_GOINFLAGS -o $TARGET $SOURCE')
     gobld.add_action('.c', '$GOCC $GOCFLAGS -o $TARGET $SOURCE')
 
     # a builder for gopack
@@ -25,11 +25,11 @@ def generate(env):
 
     # builders for executables and libraries.
     # Should we at least check?
-    goexebuild = Builder(action = '$GOLINKER -o $TARGET $SOURCES',
+    goexebuild = Builder(action = '$GOLINKER $_GOLINKFLAGS -o $TARGET $SOURCES',
             suffix = '',
             src_suffix = '$GOOBJSUFFIX',
             src_builder = ['GoObject'])
-    golibbuild = Builder(action = '$GOLINKER -o $TARGET $SOURCES',
+    golibbuild = Builder(action = '$GOLINKER $_GOLINKFLAGS -o $TARGET $SOURCES',
             suffix = '.a',
             src_suffix = '$GOOBJSUFFIX',
             src_builder = ['GoObject'])
@@ -43,9 +43,13 @@ def generate(env):
     env.SetDefault(GOOBJSUFFIX = '.${GONUMBER}')
     env.Append(BUILDERS = { 'GoObject' : gobld })
     env.Append(BUILDERS = { 'GoPack' : gopackbld })
+    env.Append(BUILDERS = { 'GoExe' : goexebuild })
+    env.Append(BUILDERS = { 'GoLibrary' : golibbuild })
     env.SetDefault(GOPKGPATH = GOCPPPATH)
     env['_make_gocflags'] = _make_gocflags
     env.SetDefault(GOCFLAGS = '${ _make_gocflags(__env__) }')
+    env.SetDefault(_GOINFLAGS = '$( ${_concat( "-I", GOINCPATH, "", __env__, RDirs, TARGET, SOURCE ) } $)')
+    env.SetDefault(_GOLINKFLAGS = '$( ${_concat( "-L", GOINCPATH, "", __env__, RDirs, TARGET, SOURCE ) } $)')
     #env.Append(SCANNERS = goscan)
 
 def exists(env):
