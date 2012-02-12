@@ -1,5 +1,7 @@
 Import('env')
 env = env.Clone()
 env.Append(GOINCPATH = "#build")
+outdir = Dir('#$OUTDIR').abspath
+env.Append(GOLINKFLAGS = '-e -r' + outdir )
 goexe = env.GoExe('goexe.go')
 env.Install('#$OUTDIR', goexe)
